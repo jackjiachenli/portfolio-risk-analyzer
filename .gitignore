@@ -1,0 +1,28 @@
+# Virtual Environment
+venv/
+env/
+.env/
+
+# Environment Variables
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.puo
+*.pyd
+.Python
+
+# Data files
+data/*.csv
+data/*.xlsx
+data/*.json
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Logs
+*.log 
+logs/
