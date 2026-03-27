@@ -1,0 +1,13 @@
+[project]
+name = "portfolio-risk-analyzer"
+version = "0.1.0"
+description = "Stock portfolio risk analysis tool"
+requires-python = ">=3.10"
+dependencies = [
+    "yfinance>=1.2",
+    "pandas>=2.0",
+    "numpy>=2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
