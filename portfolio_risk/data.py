@@ -1,9 +1,9 @@
 from pandas import DataFrame
-import yfinance
+import yfinance as yf
 
 def get_price_data(tickers: list, start_date: str, end_date: str) -> DataFrame | None:
     try:
-        data = yfinance.download(tickers, start=start_date, end=end_date)
+        data = yf.download(tickers, start=start_date, end=end_date)
         if data.empty:
             return None
         return data
@@ -11,6 +11,7 @@ def get_price_data(tickers: list, start_date: str, end_date: str) -> DataFrame |
         print(f"Error fetching data: {e}")
         return None
 
-if __name__ == "__main__":
-    result = get_price_data(["AAPL", "MSFT"], "2023-01-01", "2023-02-01")
-    print(result)
+def get_risk_free_rate() -> float:
+    treasury = yf.Ticker("^TNX")
+    rate = treasury.fast_info["lastPrice"]
+    return rate / 100
