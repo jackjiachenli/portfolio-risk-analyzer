@@ -16,7 +16,7 @@ def calculate_annualised_volatility(returns: DataFrame | None) -> float | None:
 def calculate_sharpe_ratio(
     annualised_return: float | None, 
     annualised_volatility: float | None, 
-    risk_free_rate: float
+    risk_free_rate: float = 0.042
 ) -> float | None:
     if annualised_return is None or annualised_volatility is None:
         return None
@@ -79,6 +79,7 @@ def calculate_max_drawdown(
         return None
     
     cumulative = (1 + returns).cumprod()
-    peak = returns.cummax()
+    peak = cumulative.cummax()
     
-    return (cumulative - peak) / peak
+    drawdown = (cumulative - peak) / peak
+    return drawdown.min()
