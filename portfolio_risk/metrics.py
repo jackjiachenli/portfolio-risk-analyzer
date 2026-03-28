@@ -54,3 +54,31 @@ def calculate_var(
     
     var = abs(returns.quantile(1-confidence_level))
     return var
+
+def calculate_cvar(
+    returns: Series | None,
+    confidence_level: float = 0.95
+) -> float | None:
+    if returns is None:
+        return None
+
+    var_threshold = calculate_var(returns, confidence_level)
+    if var_threshold is None:
+        return None
+
+    filtered = returns[returns < var_threshold]
+    if filtered.empty:
+        return 0.0
+
+    return abs(filtered.mean())
+
+def calculate_max_drawdown(
+    returns: Series | None
+) -> float | None:
+    if returns is None:
+        return None
+    
+    cumulative = (1 + returns).cumprod()
+    peak = returns.cummax()
+    
+    return (cumulative - peak) / peak
