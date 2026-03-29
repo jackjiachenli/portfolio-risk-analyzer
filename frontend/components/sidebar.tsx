@@ -25,6 +25,8 @@ export default function Sidebar({
   const [shares, setShares]   = useState("");
   const [adding, setAdding]   = useState(false);
   const [addError, setAddError] = useState("");
+  const [editingTicker, setEditingTicker] = useState<string | null>(null);
+  const [editShares, setEditShares] = useState("");
 
   const totalValue = entries.reduce((s, e) => s + e.shares * e.price, 0);
 
@@ -138,16 +140,17 @@ export default function Sidebar({
               {entries.map(e => {
                 const val = e.shares * e.price;
                 const w = totalValue > 0 ? (val / totalValue * 100).toFixed(1) : "0.0";
+                const isEditing = editingTicker === e.ticker;
+
                 return (
                   <div
                     key={e.ticker}
                     style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      gap: 8, padding: "10px 12px", borderRadius: 8,
+                      padding: "10px 12px", borderRadius: 8,
                       background: "var(--bg)", border: "1px solid var(--border)",
                     }}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{
                           fontFamily: "DM Mono, monospace", fontSize: "0.75rem",
@@ -159,16 +162,60 @@ export default function Sidebar({
                         </span>
                         <span style={{ color: "var(--muted)", fontSize: "0.65rem" }}>{w}%</span>
                       </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => {
+                            setEditingTicker(isEditing ? null : e.ticker);
+                            setEditShares(e.shares.toString());
+                          }}
+                          style={{ color: "var(--muted)", background: "none", border: "none", cursor: "pointer", fontSize: "0.7rem", padding: "2px 4px" }}
+                        >
+                          {isEditing ? "Cancel" : "Edit"}
+                        </button>
+                        <button
+                          onClick={() => onRemove(e.ticker)}
+                          style={{ color: "var(--muted)", background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", padding: "2px 4px" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditing ? (
+                      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={editShares}
+                          onChange={e => setEditShares(e.target.value)}
+                          style={{
+                            flex: 1, background: "var(--surface)", border: "1px solid var(--border-hi)",
+                            borderRadius: 6, color: "var(--text)", fontFamily: "DM Mono, monospace",
+                            fontSize: "0.75rem", padding: "4px 8px", outline: "none",
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const parsed = parseFloat(editShares);
+                            if (!isNaN(parsed) && parsed > 0) {
+                              onAdd(e.ticker, parsed);
+                              setEditingTicker(null);
+                            }
+                          }}
+                          style={{
+                            background: "var(--text)", color: "var(--bg)", border: "none",
+                            borderRadius: 6, fontFamily: "DM Mono, monospace", fontSize: "0.7rem",
+                            padding: "4px 10px", cursor: "pointer",
+                          }}
+                        >
+                          save
+                        </button>
+                      </div>
+                    ) : (
                       <div style={{ color: "var(--muted)", fontSize: "0.65rem", marginTop: 4 }}>
                         {e.shares.toFixed(4)} × ${e.price.toFixed(2)} = <span style={{ color: "var(--text)" }}>${val.toLocaleString("en", { maximumFractionDigits: 2 })}</span>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => onRemove(e.ticker)}
-                      style={{ color: "var(--muted)", background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", padding: "2px 4px", flexShrink: 0 }}
-                    >
-                      ✕
-                    </button>
+                    )}
                   </div>
                 );
               })}
@@ -181,8 +228,11 @@ export default function Sidebar({
 
         {/* Date range */}
         <div>
-          <p style={{ color: "var(--muted)", fontSize: "0.65rem", letterSpacing: "0.12em", marginBottom: "0.6rem" }}>
+          <p style={{ color: "var(--muted)", fontSize: "0.65rem", letterSpacing: "0.12em", marginBottom: 4 }}>
             DATE RANGE
+          </p>
+          <p style={{ color: "var(--muted)", fontSize: "0.6rem", marginBottom: "0.8rem", lineHeight: 1.5 }}>
+            Historical period used to calculate returns, volatility, and risk metrics.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div>

@@ -18,14 +18,36 @@ export interface PortfolioEntry {
 }
 
 export default function Home() {
-  const [entries, setEntries]         = useState<PortfolioEntry[]>([]);
-  const [startDate, setStartDate]     = useState("2022-01-01");
-  const [endDate, setEndDate]         = useState(new Date().toISOString().slice(0, 10));
+  const [entries, setEntries] = useState<PortfolioEntry[]>([]);
+  const [startDate, setStartDate] = useState("2022-01-01");
+  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
   const [result, setResult]           = useState<AnalyseResponse | null>(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("portfolio_entries");
+      if (saved) setEntries(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    const start = localStorage.getItem("portfolio_start_date");
+    const end = localStorage.getItem("portfolio_end_date");
+    if (start) setStartDate(start);
+    if (end) setEndDate(end);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("portfolio_entries", JSON.stringify(entries));
+    localStorage.setItem("portfolio_start_date", startDate);
+    localStorage.setItem("portfolio_end_date", endDate);
+  }, [entries, startDate, endDate]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
