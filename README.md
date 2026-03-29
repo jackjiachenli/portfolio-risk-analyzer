@@ -71,7 +71,7 @@ Generates a structured prompt containing your full portfolio data, all risk metr
 ```
 portfolio-risk-analyzer/
 ├── api/
-│   └── main.py               FastAPI backend
+│   └── main.py                FastAPI backend
 ├── frontend/
 │   ├── app/
 │   │   ├── page.tsx           Main dashboard page
