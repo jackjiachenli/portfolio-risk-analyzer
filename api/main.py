@@ -17,11 +17,15 @@ from portfolio_risk.metrics import (
 )
 from portfolio_risk.simulation import run_monte_carlo
 
+# App
+
 app = FastAPI(
     title="Portfolio Risk Analyzer API",
     description="Quantitative portfolio risk metrics powered by Modern Portfolio Theory",
     version="1.0.0",
 )
+
+# CORS
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +33,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Models
 
 class Position(BaseModel):
     ticker: str
@@ -49,8 +55,8 @@ class Position(BaseModel):
 
 class AnalyseRequest(BaseModel):
     positions: list[Position]
-    start_date: str   # "YYYY-MM-DD"
-    end_date: str     # "YYYY-MM-DD"
+    start_date: str
+    end_date: str
     confidence_level: float = 0.95
     simulations: int = 500
     simulation_days: int = 252
@@ -73,6 +79,10 @@ class MonteCarloSummary(BaseModel):
     p95: float
     p95_pct: float
     prob_profit: float
+    paths: list[list[float]]
+    median_path: list[float]
+    p5_path: list[float]
+    p95_path: list[float]
 
 
 class CorrelationMatrix(BaseModel):
@@ -98,9 +108,11 @@ class PriceResponse(BaseModel):
     ticker: str
     price: float
 
-
+MonteCarloSummary.model_rebuild()
+AnalyseResponse.model_rebuild()
 
 # Endpoints
+
 @app.get("/")
 def root():
     return {"status": "ok", "message": "Portfolio Risk Analyzer API"}
@@ -121,7 +133,6 @@ def get_price(ticker: str):
 def analyse(request: AnalyseRequest):
     """
     Run a full portfolio risk analysis.
-
     Accepts a list of positions (ticker + shares), fetches historical price data,
     calculates all risk metrics, and runs a Monte Carlo simulation.
     """
@@ -192,7 +203,7 @@ def analyse(request: AnalyseRequest):
 
     # Monte Carlo
     monte_carlo = None
-    current_val = float((1 + portfolio_returns).cumprod().iloc[-1]) * total_value
+    current_val = total_value
     mc = run_monte_carlo(current_val, ann_return, ann_vol,
                          days=request.simulation_days,
                          simulations=request.simulations)
@@ -204,6 +215,9 @@ def analyse(request: AnalyseRequest):
         p95_val     = float(final_vals.quantile(0.95))
         prob_profit = float((final_vals > current_val).mean() * 100)
 
+        sampled = mc.iloc[:, ::max(1, request.simulations // 100)]
+        paths = [[round(v, 2) for v in sampled.iloc[:, i].tolist()] for i in range(sampled.shape[1])]
+
         monte_carlo = MonteCarloSummary(
             start_value  = current_val,
             median       = median_val,
@@ -213,18 +227,22 @@ def analyse(request: AnalyseRequest):
             p95          = p95_val,
             p95_pct      = (p95_val - current_val) / current_val * 100,
             prob_profit  = prob_profit,
+            paths        = paths,
+            median_path  = [round(v, 2) for v in mc.median(axis=1).tolist()],
+            p5_path      = [round(v, 2) for v in mc.quantile(0.05, axis=1).tolist()],
+            p95_path     = [round(v, 2) for v in mc.quantile(0.95, axis=1).tolist()],
         )
 
     return AnalyseResponse(
-        positions          = positions_detail,
-        total_value        = total_value,
-        risk_free_rate     = risk_free,
-        annualised_return  = ann_return,
+        positions             = positions_detail,
+        total_value           = total_value,
+        risk_free_rate        = risk_free,
+        annualised_return     = ann_return,
         annualised_volatility = ann_vol,
-        sharpe_ratio       = sharpe,
-        var                = var,
-        cvar               = cvar,
-        max_drawdown       = max_dd,
-        correlation        = correlation,
-        monte_carlo        = monte_carlo,
+        sharpe_ratio          = sharpe,
+        var                   = var,
+        cvar                  = cvar,
+        max_drawdown          = max_dd,
+        correlation           = correlation,
+        monte_carlo           = monte_carlo,
     )
