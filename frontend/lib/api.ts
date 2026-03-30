@@ -35,6 +35,13 @@ export interface CorrelationMatrix {
   values: number[][];
 }
 
+export interface BenchmarkData {
+  annualised_return: number | null;
+  annualised_volatility: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+}
+
 export interface AnalyseResponse {
   positions: PositionDetail[];
   total_value: number;
@@ -47,6 +54,7 @@ export interface AnalyseResponse {
   max_drawdown: number | null;
   correlation: CorrelationMatrix | null;
   monte_carlo: MonteCarloSummary | null;
+  benchmark: BenchmarkData | null;
 }
 
 export interface AnalyseRequest {

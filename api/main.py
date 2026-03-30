@@ -106,14 +106,46 @@ class AnalyseResponse(BaseModel):
     max_drawdown: float | None
     correlation: CorrelationMatrix | None
     monte_carlo: MonteCarloSummary | None
+    benchmark: BenchmarkData | None
 
 
 class PriceResponse(BaseModel):
     ticker: str
     price: float
 
+
+class BenchmarkData(BaseModel):
+    annualised_return: float | None
+    annualised_volatility: float | None
+    sharpe_ratio: float | None
+    max_drawdown: float | None
+
 MonteCarloSummary.model_rebuild()
 AnalyseResponse.model_rebuild()
+
+
+def get_benchmark_data(start_date: str, end_date: str, risk_free: float) -> BenchmarkData | None:
+    spy_prices = get_price_data(["SPY"], start_date, end_date)
+    if spy_prices is None:
+        return None
+
+    if isinstance(spy_prices.columns, pd.MultiIndex):
+        spy_prices = spy_prices["Close"]
+
+    spy_returns = calculate_returns(spy_prices.squeeze())
+
+    ann_return = calculate_annualised_return(spy_returns)
+    ann_vol    = calculate_annualised_volatility(spy_returns)
+    sharpe     = calculate_sharpe_ratio(ann_return, ann_vol, risk_free)
+    max_dd     = calculate_max_drawdown(spy_returns)
+
+    return BenchmarkData(
+        annualised_return     = ann_return,
+        annualised_volatility = ann_vol,
+        sharpe_ratio          = sharpe,
+        max_drawdown          = max_dd,
+    )
+
 
 # Endpoints
 
@@ -131,6 +163,7 @@ def get_price(ticker: str):
         return PriceResponse(ticker=ticker.upper(), price=price)
     except Exception:
         raise HTTPException(status_code=404, detail=f"Could not fetch price for {ticker}")
+
 
 
 @app.post("/analyse", response_model=AnalyseResponse)
@@ -237,6 +270,8 @@ def analyse(request: AnalyseRequest):
             p95_path     = [round(v, 2) for v in mc.quantile(0.95, axis=1).tolist()],
         )
 
+    benchmark = get_benchmark_data(request.start_date, request.end_date, risk_free)
+
     return AnalyseResponse(
         positions             = positions_detail,
         total_value           = total_value,
@@ -249,4 +284,5 @@ def analyse(request: AnalyseRequest):
         max_drawdown          = max_dd,
         correlation           = correlation,
         monte_carlo           = monte_carlo,
+        benchmark             = benchmark,
     )

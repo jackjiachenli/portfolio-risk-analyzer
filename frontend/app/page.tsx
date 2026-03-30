@@ -221,7 +221,7 @@ export default function Home() {
           {/* Results */}
           {!loading && result && (
             <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-              <MetricGrid result={result} />
+              <MetricGrid result={result} benchmark={result.benchmark} />
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
                 <WeightsChart positions={result.positions} />
                 {result.correlation && <CorrelationChart correlation={result.correlation} />}
