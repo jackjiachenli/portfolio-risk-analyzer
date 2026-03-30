@@ -146,7 +146,6 @@ pytest
 ### Risk & Metrics
 
 - Per-stock breakdown of return, volatility, and Sharpe ratio alongside portfolio-level metrics
-- Benchmark comparison against SPY over the same historical period, so metrics are contextualised against the market
 - Beta per holding — how much each stock amplifies or dampens market movements
 - Proper historical cumulative return chart using actual day-by-day price data rather than the current approximation
 
