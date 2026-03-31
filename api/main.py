@@ -107,6 +107,8 @@ class AnalyseResponse(BaseModel):
     correlation: CorrelationMatrix | None
     monte_carlo: MonteCarloSummary | None
     benchmark: BenchmarkData | None
+    cumulative_returns: list[float] | None
+    cumulative_dates: list[str] | None
 
 
 class PriceResponse(BaseModel):
@@ -270,7 +272,12 @@ def analyse(request: AnalyseRequest):
             p95_path     = [round(v, 2) for v in mc.quantile(0.95, axis=1).tolist()],
         )
 
+    # Get benchmark data
     benchmark = get_benchmark_data(request.start_date, request.end_date, risk_free)
+
+    # Get cumulative data
+    cumulative = (1 + portfolio_returns).cumprod().tolist()
+    dates = portfolio_returns.index.strftime("%Y-%m-%d").tolist()
 
     return AnalyseResponse(
         positions             = positions_detail,
@@ -285,4 +292,6 @@ def analyse(request: AnalyseRequest):
         correlation           = correlation,
         monte_carlo           = monte_carlo,
         benchmark             = benchmark,
+        cumulative_returns    = cumulative,
+        cumulative_dates      = dates,
     )

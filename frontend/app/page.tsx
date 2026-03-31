@@ -228,11 +228,8 @@ export default function Home() {
               </div>
               {result.monte_carlo && <MonteCarloChart summary={result.monte_carlo} />}
               <CumulativeChart
-                annReturn={result.annualised_return}
-                annVol={result.annualised_volatility}
-                totalValue={result.total_value}
-                startDate={startDate}
-                endDate={endDate}
+                dates={result.cumulative_dates}
+                values={result.cumulative_returns}
               />
               <AdvisorPrompt result={result} entries={entries} startDate={startDate} endDate={endDate} />
             </div>

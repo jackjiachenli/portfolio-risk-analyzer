@@ -66,7 +66,7 @@ def calculate_cvar(
     if var_threshold is None:
         return None
 
-    filtered = returns[returns < var_threshold]
+    filtered = returns[returns < -var_threshold]
     if filtered.empty:
         return 0.0
 

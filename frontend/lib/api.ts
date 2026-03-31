@@ -55,6 +55,8 @@ export interface AnalyseResponse {
   correlation: CorrelationMatrix | null;
   monte_carlo: MonteCarloSummary | null;
   benchmark: BenchmarkData | null;
+  cumulative_returns: number[] | null;
+  cumulative_dates: string[] | null;
 }
 
 export interface AnalyseRequest {
