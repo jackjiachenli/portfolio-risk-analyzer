@@ -11,126 +11,110 @@ interface Props {
   endDate: string;
 }
 
-function pct(v: number | null) { return v == null ? "N/A" : `${(v * 100).toFixed(2)}%`; }
-function f(v: number | null)   { return v == null ? "N/A" : v.toFixed(2); }
+function pct(v: number | null, decimals = 2): string {
+  return v == null ? "N/A" : `${(v * 100).toFixed(decimals)}%`;
+}
+function dollar(v: number): string {
+  return "$" + v.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function f(v: number | null, decimals = 2): string {
+  return v == null ? "N/A" : v.toFixed(decimals);
+}
 
 export default function AdvisorPrompt({ result, entries, startDate, endDate }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const { positions, total_value, risk_free_rate, annualised_return, annualised_volatility,
-          sharpe_ratio, var: varVal, cvar, max_drawdown, correlation, monte_carlo,
-          per_stock_metrics } = result;
+  const {
+    positions, total_value, risk_free_rate,
+    annualised_return, annualised_volatility, sharpe_ratio,
+    var: varVal, cvar, max_drawdown,
+    monte_carlo, per_stock_metrics, sector_breakdown, benchmark,
+  } = result;
 
-  const holdingsTable = positions.map(p =>
-    `  ${p.ticker.padEnd(8)} ${p.shares.toFixed(4).padStart(10)} $${p.current_price.toFixed(2).padStart(9)}  $${p.value.toLocaleString("en", { maximumFractionDigits: 2 }).padStart(12)}  ${(p.weight * 100).toFixed(1).padStart(6)}%`
-  ).join("\n");
+  // Holdings table
+  const holdingRows = positions.map(p => {
+    const sm = per_stock_metrics?.find(s => s.ticker === p.ticker);
+    return [
+      p.ticker,
+      p.shares.toString(),
+      dollar(p.current_price),
+      dollar(p.value),
+      pct(p.weight),
+      sm?.sector ?? "N/A",
+      pct(sm?.annualised_return ?? null),
+      pct(sm?.annualised_volatility ?? null),
+      f(sm?.sharpe_ratio ?? null),
+      pct(sm?.max_drawdown ?? null),
+    ].join(" | ");
+  }).join("\n");
 
-  let perStockBlock = "";
-  if (per_stock_metrics && per_stock_metrics.length > 0) {
-    const header = `  ${"Ticker".padEnd(8)} ${"Ann.Return".padStart(11)} ${"Volatility".padStart(11)} ${"Sharpe".padStart(8)} ${"MaxDrawdown".padStart(12)}`;
-    const divider = `  ${"-".repeat(54)}`;
-    const rows = per_stock_metrics.map(s =>
-      `  ${s.ticker.padEnd(8)} ${pct(s.annualised_return).padStart(11)} ${pct(s.annualised_volatility).padStart(11)} ${f(s.sharpe_ratio).padStart(8)} ${pct(s.max_drawdown).padStart(12)}`
-    ).join("\n");
-    perStockBlock = `── PER-STOCK METRICS ────────────────────────────────────────────────
-${header}
-${divider}
-${rows}
-`;
-  }
+  // Sector rows
+  const sectorRows = sector_breakdown && sector_breakdown.length > 0
+    ? sector_breakdown.map(s => `  ${s.sector}: ${pct(s.weight)}`).join("\n")
+    : "  N/A";
 
-  let corrBlock = "";
-  if (correlation) {
-    const header = "          " + correlation.tickers.map(t => t.padStart(8)).join("");
-    const rows   = correlation.tickers.map((t, i) =>
-      t.padStart(8) + "  " + correlation.values[i].map(v => v.toFixed(2).padStart(8)).join("")
-    ).join("\n");
-    corrBlock = `── CORRELATION MATRIX ──────────────────────────────────────────────
-(1.0 = perfectly correlated · 0 = independent · -1 = inverse)
-
-${header}
-${rows}
-`;
-  }
-
-  let mcBlock = "";
+  // Monte Carlo block
+  let mcBlock = "N/A";
   if (monte_carlo) {
     const mc = monte_carlo;
-    mcBlock = `── MONTE CARLO SIMULATION (1 YEAR · 500 PATHS) ─────────────────────
-Starting Value    : $${mc.start_value.toLocaleString("en", { maximumFractionDigits: 2 })}
-Median Outcome    : $${mc.median.toLocaleString("en", { maximumFractionDigits: 2 })}  (${mc.median_pct > 0 ? "+" : ""}${mc.median_pct.toFixed(1)}%)
-Best 5% Scenario  : $${mc.p95.toLocaleString("en", { maximumFractionDigits: 2 })}  (${mc.p95_pct > 0 ? "+" : ""}${mc.p95_pct.toFixed(1)}%)
-Worst 5% Scenario : $${mc.p5.toLocaleString("en", { maximumFractionDigits: 2 })}  (${mc.p5_pct > 0 ? "+" : ""}${mc.p5_pct.toFixed(1)}%)
-Prob. of Profit   : ${mc.prob_profit.toFixed(1)}%
-`;
+    mcBlock = [
+      `Starting value : ${dollar(mc.start_value)}`,
+      `Median outcome : ${dollar(mc.median)} (${mc.median_pct > 0 ? "+" : ""}${mc.median_pct.toFixed(1)}%)`,
+      `Best 5%        : ${dollar(mc.p95)} (+${mc.p95_pct.toFixed(1)}%)`,
+      `Worst 5%       : ${dollar(mc.p5)} (${mc.p5_pct.toFixed(1)}%)`,
+      `Prob. of profit: ${mc.prob_profit.toFixed(1)}%`,
+    ].join("\n");
   }
 
-  const prompt = `${"=".repeat(70)}
-PORTFOLIO RISK ANALYSIS — AI ADVISOR PROMPT
-${"=".repeat(70)}
+  const prompt =
+`=== PORTFOLIO ANALYSIS DATA ===
 
-You are an expert quantitative portfolio analyst and financial advisor.
-Below is a complete risk analysis of my current stock portfolio.
-Please provide specific, actionable advice based on this data.
+Period : ${startDate} → ${endDate}
+Total value     : ${dollar(total_value)}
+Risk-free rate  : ${pct(risk_free_rate)} (US 13-week Treasury)
 
-── PORTFOLIO HOLDINGS ──────────────────────────────────────────────
-Analysis Period : ${startDate} to ${endDate}
-Total Value     : $${total_value.toLocaleString("en", { maximumFractionDigits: 2 })}
-Risk-Free Rate  : ${pct(risk_free_rate)} (US 10yr Treasury)
+--- HOLDINGS ---
+Columns: Ticker | Shares | Price | Value | Weight | Sector | Ann.Return | Volatility | Sharpe | MaxDrawdown
+${holdingRows}
 
-  ${"Ticker".padEnd(8)} ${"Shares".padStart(10)} ${"Price".padStart(10)}  ${"Value".padStart(13)}  ${"Weight".padStart(7)}
-  ${"-".repeat(58)}
-${holdingsTable}
+--- PORTFOLIO METRICS vs SPY BENCHMARK ---
+                     Portfolio        SPY
+Ann. Return    :  ${pct(annualised_return).padStart(10)}   ${pct(benchmark?.annualised_return ?? null).padStart(10)}
+Ann. Volatility:  ${pct(annualised_volatility).padStart(10)}   ${pct(benchmark?.annualised_volatility ?? null).padStart(10)}
+Sharpe Ratio   :  ${f(sharpe_ratio).padStart(10)}   ${f(benchmark?.sharpe_ratio ?? null).padStart(10)}
+Max Drawdown   :  ${pct(max_drawdown).padStart(10)}   ${pct(benchmark?.max_drawdown ?? null).padStart(10)}
+VaR 95%        :  ${pct(varVal).padStart(10)}   N/A
+CVaR 95%       :  ${pct(cvar).padStart(10)}   N/A
 
-── RISK METRICS ────────────────────────────────────────────────────
-Annualised Return      : ${pct(annualised_return)}
-Annualised Volatility  : ${pct(annualised_volatility)}
-Sharpe Ratio           : ${f(sharpe_ratio)}  (>1 = good · >2 = excellent)
-Value at Risk (95%)    : ${pct(varVal)}  (daily loss not exceeded 95% of days)
-CVaR (95%)             : ${pct(cvar)}  (avg loss on worst 5% of days)
-Max Drawdown           : ${pct(max_drawdown)}  (worst peak-to-trough decline)
+--- SECTOR BREAKDOWN ---
+${sectorRows}
 
-${perStockBlock}
-${corrBlock}
+--- MONTE CARLO (500 paths, 1 year) ---
 ${mcBlock}
-── QUESTIONS FOR YOU TO ANSWER ─────────────────────────────────────
 
-Based on ALL of the above data, please answer the following:
+=== INSTRUCTIONS FOR YOUR RESPONSE ===
 
-1. PORTFOLIO HEALTH
-   How healthy is this portfolio overall? Is the risk/return tradeoff
-   appropriate? How does the Sharpe Ratio compare to a simple S&P 500
-   index fund benchmark?
+You have full quantitative data above. Use it all in your reasoning.
 
-2. WHAT TO KEEP
-   Which positions are contributing positively to risk-adjusted returns?
-   Which holdings should I hold long-term and why?
+Respond with these sections:
 
-3. WHAT TO REDUCE OR SELL
-   Which positions are hurting my Sharpe Ratio or adding unnecessary
-   concentration risk? Be specific about which tickers and why.
+PORTFOLIO HEALTH
+2-3 sentences summarising the overall risk/return profile. Reference the Sharpe ratio and benchmark comparison specifically. Use plain language but don't shy away from financial terms — explain them briefly if used.
 
-4. DIVERSIFICATION GAPS
-   Looking at the correlation matrix, am I truly diversified or are my
-   holdings moving together? What asset classes or sectors am I missing?
+WHAT LOOKS STRONG
+Up to 3 bullet points. Be specific — name tickers and explain why they are working, referencing their individual metrics where relevant.
 
-5. RISK ASSESSMENT
-   Given my VaR, CVaR and Max Drawdown — am I taking on too much risk?
-   What is my biggest risk exposure right now?
+WHAT TO CONSIDER REDUCING OR SELLING
+Up to 3 bullet points. Name specific tickers, explain what the data shows about them, and suggest what type of position could replace them.
 
-6. MONTE CARLO OUTLOOK
-   Based on the simulation, what does my 1-year outlook look like?
-   Should I be concerned about the worst-case scenarios?
+DIVERSIFICATION
+2-3 sentences. Reference the sector breakdown specifically. Suggest concrete ETFs or asset classes that would improve the portfolio's risk profile, and explain why.
 
-7. SPECIFIC ACTIONS
-   Give me 3-5 concrete actions I should take with this portfolio,
-   ranked by priority. Be specific — name tickers, suggest alternatives
-   if applicable, and explain the reasoning.
+RISK SUMMARY
+2-3 sentences. Translate the VaR, CVaR, max drawdown, and Monte Carlo worst case into plain English — what do these numbers actually mean for this investor in a bad year?
 
-${"=".repeat(70)}
-Please be direct, specific, and reference the actual numbers above.
-Do not give generic advice — treat this as a real portfolio review.
-${"=".repeat(70)}`;
+OVERALL VERDICT
+One sentence.`;
 
   function copy() {
     navigator.clipboard.writeText(prompt);
