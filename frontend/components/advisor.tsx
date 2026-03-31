@@ -18,11 +18,26 @@ export default function AdvisorPrompt({ result, entries, startDate, endDate }: P
   const [copied, setCopied] = useState(false);
 
   const { positions, total_value, risk_free_rate, annualised_return, annualised_volatility,
-          sharpe_ratio, var: varVal, cvar, max_drawdown, correlation, monte_carlo } = result;
+          sharpe_ratio, var: varVal, cvar, max_drawdown, correlation, monte_carlo,
+          per_stock_metrics } = result;
 
   const holdingsTable = positions.map(p =>
     `  ${p.ticker.padEnd(8)} ${p.shares.toFixed(4).padStart(10)} $${p.current_price.toFixed(2).padStart(9)}  $${p.value.toLocaleString("en", { maximumFractionDigits: 2 }).padStart(12)}  ${(p.weight * 100).toFixed(1).padStart(6)}%`
   ).join("\n");
+
+  let perStockBlock = "";
+  if (per_stock_metrics && per_stock_metrics.length > 0) {
+    const header = `  ${"Ticker".padEnd(8)} ${"Ann.Return".padStart(11)} ${"Volatility".padStart(11)} ${"Sharpe".padStart(8)} ${"MaxDrawdown".padStart(12)}`;
+    const divider = `  ${"-".repeat(54)}`;
+    const rows = per_stock_metrics.map(s =>
+      `  ${s.ticker.padEnd(8)} ${pct(s.annualised_return).padStart(11)} ${pct(s.annualised_volatility).padStart(11)} ${f(s.sharpe_ratio).padStart(8)} ${pct(s.max_drawdown).padStart(12)}`
+    ).join("\n");
+    perStockBlock = `── PER-STOCK METRICS ────────────────────────────────────────────────
+${header}
+${divider}
+${rows}
+`;
+  }
 
   let corrBlock = "";
   if (correlation) {
@@ -75,6 +90,7 @@ Value at Risk (95%)    : ${pct(varVal)}  (daily loss not exceeded 95% of days)
 CVaR (95%)             : ${pct(cvar)}  (avg loss on worst 5% of days)
 Max Drawdown           : ${pct(max_drawdown)}  (worst peak-to-trough decline)
 
+${perStockBlock}
 ${corrBlock}
 ${mcBlock}
 ── QUESTIONS FOR YOU TO ANSWER ─────────────────────────────────────

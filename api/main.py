@@ -107,6 +107,7 @@ class AnalyseResponse(BaseModel):
     correlation: CorrelationMatrix | None
     monte_carlo: MonteCarloSummary | None
     benchmark: BenchmarkData | None
+    per_stock_metrics: list[PerStockMetrics] | None
     cumulative_returns: list[float] | None
     cumulative_dates: list[str] | None
 
@@ -117,6 +118,14 @@ class PriceResponse(BaseModel):
 
 
 class BenchmarkData(BaseModel):
+    annualised_return: float | None
+    annualised_volatility: float | None
+    sharpe_ratio: float | None
+    max_drawdown: float | None
+
+
+class PerStockMetrics(BaseModel):
+    ticker: str
     annualised_return: float | None
     annualised_volatility: float | None
     sharpe_ratio: float | None
@@ -272,6 +281,23 @@ def analyse(request: AnalyseRequest):
             p95_path     = [round(v, 2) for v in mc.quantile(0.95, axis=1).tolist()],
         )
 
+    # Per-stock metrics
+    per_stock_metrics = []
+    for ticker in tickers:
+        if ticker in returns.columns:
+            stock_returns = returns[ticker].dropna()
+            s_return = calculate_annualised_return(stock_returns)
+            s_vol    = calculate_annualised_volatility(stock_returns)
+            s_sharpe = calculate_sharpe_ratio(s_return, s_vol, risk_free)
+            s_max_dd = calculate_max_drawdown(stock_returns)
+            per_stock_metrics.append(PerStockMetrics(
+                ticker                = ticker,
+                annualised_return     = s_return,
+                annualised_volatility = s_vol,
+                sharpe_ratio          = s_sharpe,
+                max_drawdown          = s_max_dd,
+            ))
+
     # Get benchmark data
     benchmark = get_benchmark_data(request.start_date, request.end_date, risk_free)
 
@@ -292,6 +318,7 @@ def analyse(request: AnalyseRequest):
         correlation           = correlation,
         monte_carlo           = monte_carlo,
         benchmark             = benchmark,
+        per_stock_metrics     = per_stock_metrics or None,
         cumulative_returns    = cumulative,
         cumulative_dates      = dates,
     )

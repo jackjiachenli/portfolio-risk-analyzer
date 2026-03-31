@@ -42,6 +42,14 @@ export interface BenchmarkData {
   max_drawdown: number | null;
 }
 
+export interface PerStockMetrics {
+  ticker: string;
+  annualised_return: number | null;
+  annualised_volatility: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+}
+
 export interface AnalyseResponse {
   positions: PositionDetail[];
   total_value: number;
@@ -55,6 +63,7 @@ export interface AnalyseResponse {
   correlation: CorrelationMatrix | null;
   monte_carlo: MonteCarloSummary | null;
   benchmark: BenchmarkData | null;
+  per_stock_metrics: PerStockMetrics[] | null;
   cumulative_returns: number[] | null;
   cumulative_dates: string[] | null;
 }
