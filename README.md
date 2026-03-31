@@ -26,10 +26,12 @@ The dashboard calculates six core risk metrics for your portfolio:
 - **Value at Risk (VaR 95%)** — the maximum daily loss you can expect on 95% of trading days
 - **Conditional VaR (CVaR 95%)** — the average loss on the worst 5% of days, a more conservative risk measure than VaR alone
 - **Max Drawdown** — the worst peak-to-trough decline your portfolio has experienced in the selected period
+- **Benchmark comparison** — each metric is shown alongside the equivalent SPY figure over the same historical period, so you can see whether your portfolio is outperforming or underperforming the market
+- **Per-stock breakdown** — individual annualised return, volatility, Sharpe ratio, and max drawdown for each holding, allowing direct comparison across positions
 
 ### Portfolio Input
 
-Positions are entered as share quantities rather than dollar amounts. The app fetches live prices automatically and calculates dollar values and weights in real time. Fractional shares are supported. Your portfolio is saved to browser localStorage and restored on your next visit.
+Positions are entered as share quantities rather than dollar amounts. The app fetches live prices automatically and calculates dollar values and weights in real time. Fractional shares are supported. Your portfolio is saved to browser localStorage and restored on your next visit. Existing positions can be edited in place without removing and re-adding them.
 
 ### Correlation Matrix
 
@@ -51,9 +53,13 @@ Runs 500 simulated future paths for your portfolio using Geometric Brownian Moti
 
 This gives you a realistic range of outcomes rather than a single point forecast.
 
+### Historical Cumulative Return
+
+Shows the actual day-by-day growth of $1 invested in your portfolio over the selected historical period, calculated from real daily returns rather than a smooth approximation. Reveals the true volatility and drawdown periods your portfolio experienced.
+
 ### AI Advisor Prompt
 
-Generates a structured prompt containing your full portfolio data, all risk metrics, correlation matrix, and Monte Carlo summary. Copy and paste it into any AI chatbot (Claude, ChatGPT, Gemini) to receive personalised, data-driven advice on what to hold, reduce, or diversify into.
+Generates a structured prompt containing your full portfolio data, all risk metrics, correlation matrix, Monte Carlo summary, and per-stock breakdown. Copy and paste it into any AI chatbot (Claude, ChatGPT, Gemini) to receive personalised, data-driven advice on what to hold, reduce, or diversify into.
 
 ---
 
@@ -145,13 +151,11 @@ pytest
 
 ### Risk & Metrics
 
-- Per-stock breakdown of return, volatility, and Sharpe ratio alongside portfolio-level metrics
 - Beta per holding — how much each stock amplifies or dampens market movements
-- Proper historical cumulative return chart using actual day-by-day price data rather than the current approximation
+- Sector and asset class breakdown fetched automatically from yfinance to identify concentration risk
 
 ### Portfolio Intelligence
 
-- Sector and asset class breakdown fetched automatically from yfinance
 - Dividend yield per holding for income-focused analysis
 - Fundamental data (P/E ratio, market cap) included in the AI advisor prompt for valuation context
 - Efficient frontier visualisation showing the optimal risk/return allocation across your holdings
@@ -174,5 +178,4 @@ pytest
 
 - Risk metrics are calculated from historical data and do not predict future performance
 - Monte Carlo simulation assumes constant drift and volatility based on the historical period selected
-- The cumulative return chart is an approximation based on average daily return, not actual historical price movements
 - Live price data depends on yfinance availability
