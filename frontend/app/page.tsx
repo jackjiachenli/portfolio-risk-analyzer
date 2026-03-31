@@ -233,7 +233,7 @@ export default function Home() {
                 dates={result.cumulative_dates}
                 values={result.cumulative_returns}
               />
-              <AdvisorPrompt result={result} entries={entries} startDate={startDate} endDate={endDate} />
+              <AdvisorPrompt result={result} startDate={startDate} endDate={endDate} />
             </div>
           )}
         </div>

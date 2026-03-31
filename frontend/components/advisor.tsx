@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import type { AnalyseResponse } from "../lib/api";
-import type { PortfolioEntry } from "../app/page";
 
 interface Props {
   result: AnalyseResponse;
-  entries: PortfolioEntry[];
   startDate: string;
   endDate: string;
 }
@@ -21,7 +19,7 @@ function f(v: number | null, decimals = 2): string {
   return v == null ? "N/A" : v.toFixed(decimals);
 }
 
-export default function AdvisorPrompt({ result, entries, startDate, endDate }: Props) {
+export default function AdvisorPrompt({ result, startDate, endDate }: Props) {
   const [copied, setCopied] = useState(false);
 
   const {
