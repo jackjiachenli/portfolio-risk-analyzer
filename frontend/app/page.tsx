@@ -10,6 +10,7 @@ import WeightsChart from "../components/weights";
 import MonteCarloChart from "../components/monte-carlo";
 import CumulativeChart from "../components/cumulative";
 import AdvisorPrompt from "../components/advisor";
+import SectorChart from "../components/sectors";
 
 export interface PortfolioEntry {
   ticker: string;
@@ -226,6 +227,7 @@ export default function Home() {
                 <WeightsChart positions={result.positions} />
                 {result.correlation && <CorrelationChart correlation={result.correlation} />}
               </div>
+              {result.sector_breakdown && <SectorChart sectors={result.sector_breakdown} />}
               {result.monte_carlo && <MonteCarloChart summary={result.monte_carlo} />}
               <CumulativeChart
                 dates={result.cumulative_dates}

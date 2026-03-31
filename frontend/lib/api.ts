@@ -48,6 +48,13 @@ export interface PerStockMetrics {
   annualised_volatility: number | null;
   sharpe_ratio: number | null;
   max_drawdown: number | null;
+  sector: string | null;
+}
+
+export interface SectorBreakdown {
+  sector: string;
+  value: number;
+  weight: number;
 }
 
 export interface AnalyseResponse {
@@ -64,6 +71,7 @@ export interface AnalyseResponse {
   monte_carlo: MonteCarloSummary | null;
   benchmark: BenchmarkData | null;
   per_stock_metrics: PerStockMetrics[] | null;
+  sector_breakdown: SectorBreakdown[] | null;
   cumulative_returns: number[] | null;
   cumulative_dates: string[] | null;
 }

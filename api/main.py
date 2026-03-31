@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 import pandas as pd
+import yfinance as yf
 
 from portfolio_risk.data import get_price_data, get_risk_free_rate
 from portfolio_risk.returns import calculate_returns
@@ -108,6 +109,7 @@ class AnalyseResponse(BaseModel):
     monte_carlo: MonteCarloSummary | None
     benchmark: BenchmarkData | None
     per_stock_metrics: list[PerStockMetrics] | None
+    sector_breakdown: list[SectorBreakdown] | None
     cumulative_returns: list[float] | None
     cumulative_dates: list[str] | None
 
@@ -130,9 +132,36 @@ class PerStockMetrics(BaseModel):
     annualised_volatility: float | None
     sharpe_ratio: float | None
     max_drawdown: float | None
+    sector: str | None
+
+
+class SectorBreakdown(BaseModel):
+    sector: str
+    value: float
+    weight: float
 
 MonteCarloSummary.model_rebuild()
 AnalyseResponse.model_rebuild()
+
+
+def get_ticker_sector(ticker: str) -> str:
+    try:
+        info = yf.Ticker(ticker).info
+        # Try sector first (works for individual stocks)
+        sector = info.get("sector")
+        if sector:
+            return sector
+        # Fall back to quoteType for ETFs and funds
+        quote_type = info.get("quoteType", "")
+        if quote_type == "ETF":
+            # Use the ETF's category or long name as a descriptor
+            category = info.get("category") or info.get("longName", "ETF")
+            return f"ETF — {category}"
+        if quote_type == "MUTUALFUND":
+            return "Mutual Fund"
+        return "Unknown"
+    except Exception:
+        return "Unknown"
 
 
 def get_benchmark_data(start_date: str, end_date: str, risk_free: float) -> BenchmarkData | None:
@@ -168,7 +197,6 @@ def root():
 @app.get("/price/{ticker}", response_model=PriceResponse)
 def get_price(ticker: str):
     """Fetch the current live price for a single ticker."""
-    import yfinance as yf
     try:
         price = float(yf.Ticker(ticker.upper()).fast_info["lastPrice"])
         return PriceResponse(ticker=ticker.upper(), price=price)
@@ -191,8 +219,6 @@ def analyse(request: AnalyseRequest):
         raise HTTPException(status_code=400, detail="Maximum 20 positions supported")
 
     # Fetch current prices
-    import yfinance as yf
-
     tickers = [p.ticker for p in request.positions]
     shares  = [p.shares for p in request.positions]
 
@@ -283,7 +309,13 @@ def analyse(request: AnalyseRequest):
 
     # Per-stock metrics
     per_stock_metrics = []
-    for ticker in tickers:
+    sector_values: dict[str, float] = {}
+    for i, ticker in enumerate(tickers):
+        try:
+            sector = get_ticker_sector(ticker)
+        except Exception:
+            sector = "Unknown"
+        sector_values[sector] = sector_values.get(sector, 0.0) + values[i]
         if ticker in returns.columns:
             stock_returns = returns[ticker].dropna()
             s_return = calculate_annualised_return(stock_returns)
@@ -296,7 +328,13 @@ def analyse(request: AnalyseRequest):
                 annualised_volatility = s_vol,
                 sharpe_ratio          = s_sharpe,
                 max_drawdown          = s_max_dd,
+                sector                = sector,
             ))
+
+    sector_breakdown = [
+        SectorBreakdown(sector=s, value=v, weight=v / total_value)
+        for s, v in sorted(sector_values.items(), key=lambda x: x[1], reverse=True)
+    ]
 
     # Get benchmark data
     benchmark = get_benchmark_data(request.start_date, request.end_date, risk_free)
@@ -319,6 +357,7 @@ def analyse(request: AnalyseRequest):
         monte_carlo           = monte_carlo,
         benchmark             = benchmark,
         per_stock_metrics     = per_stock_metrics or None,
+        sector_breakdown      = sector_breakdown or None,
         cumulative_returns    = cumulative,
         cumulative_dates      = dates,
     )
