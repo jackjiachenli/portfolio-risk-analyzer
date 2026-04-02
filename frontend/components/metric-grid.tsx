@@ -53,14 +53,18 @@ function Card({ label, value, sub, color = "var(--text)", benchmarkValue }: Card
 export default function MetricGrid({ result, benchmark }: Props) {
   const {
     annualised_return: ar, annualised_volatility: av,
-    sharpe_ratio: sr, var: v, cvar: cv, max_drawdown: md,
+    sharpe_ratio: sr, sortino_ratio: sortino, beta, alpha,
+    var: v, cvar: cv, max_drawdown: md,
     risk_free_rate: rf, total_value: tv,
   } = result;
 
-  const returnColor = ar == null ? "var(--text)" : ar > 0 ? "var(--green)" : "var(--red)";
-  const sharpeColor = sr == null ? "var(--text)" : sr > 1 ? "var(--green)" : sr > 0 ? "var(--yellow)" : "var(--red)";
-  const volColor    = av == null ? "var(--text)" : av > 0.25 ? "var(--red)" : av > 0.15 ? "var(--yellow)" : "var(--text)";
-  const ddColor     = md == null ? "var(--text)" : md < -0.2 ? "var(--red)" : "var(--yellow)";
+  const returnColor  = ar == null     ? "var(--text)" : ar > 0      ? "var(--green)"  : "var(--red)";
+  const sharpeColor  = sr == null     ? "var(--text)" : sr > 1      ? "var(--green)"  : sr > 0      ? "var(--yellow)" : "var(--red)";
+  const sortinoColor = sortino == null ? "var(--text)" : sortino > 1 ? "var(--green)"  : sortino > 0 ? "var(--yellow)" : "var(--red)";
+  const volColor     = av == null     ? "var(--text)" : av > 0.25   ? "var(--red)"    : av > 0.15   ? "var(--yellow)" : "var(--text)";
+  const ddColor      = md == null     ? "var(--text)" : md < -0.2   ? "var(--red)"    : "var(--yellow)";
+  const betaColor    = beta == null   ? "var(--text)" : beta > 1.2  ? "var(--red)"    : beta < 0.8  ? "var(--green)"  : "var(--text)";
+  const alphaColor   = alpha == null  ? "var(--text)" : alpha > 0   ? "var(--green)"  : "var(--red)";
 
   return (
     <div>
@@ -68,18 +72,25 @@ export default function MetricGrid({ result, benchmark }: Props) {
         RISK METRICS — PORTFOLIO VALUE ${tv.toLocaleString("en", { maximumFractionDigits: 2 })} · RISK-FREE RATE {pct(rf)}
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-        <Card label="Annual Return"         value={pct(ar)}  color={returnColor}
+        <Card label="Annual Return"         value={pct(ar)}      color={returnColor}
               benchmarkValue={benchmark ? pct(benchmark.annualised_return) : undefined} />
-        <Card label="Annualised Volatility" value={pct(av)}  color={volColor}
+        <Card label="Annualised Volatility" value={pct(av)}      color={volColor}
               benchmarkValue={benchmark ? pct(benchmark.annualised_volatility) : undefined} />
-        <Card label="Sharpe Ratio"          value={f(sr)}    color={sharpeColor}
+        <Card label="Sharpe Ratio"          value={f(sr)}        color={sharpeColor}
               sub={sr != null ? (sr > 1 ? "Good risk-adjusted return" : sr > 0 ? "Below benchmark" : "Negative") : undefined}
               benchmarkValue={benchmark ? f(benchmark.sharpe_ratio) : undefined} />
-        <Card label="VaR — 95%"             value={pct(v)}   color="var(--yellow)"
+        <Card label="Sortino Ratio"         value={f(sortino)}   color={sortinoColor}
+              sub={sortino != null ? (sortino > 1 ? "Good downside-adjusted return" : sortino > 0 ? "Below benchmark" : "Negative") : undefined}
+              benchmarkValue={benchmark ? f(benchmark.sortino_ratio) : undefined} />
+        <Card label="Beta"                  value={f(beta, 3)}   color={betaColor}
+              sub={beta != null ? (beta > 1 ? "More volatile than market" : beta < 1 ? "Less volatile than market" : "Moves with market") : undefined} />
+        <Card label="Alpha"                 value={pct(alpha)}   color={alphaColor}
+              sub={alpha != null ? (alpha > 0 ? "Outperforming risk-adjusted benchmark" : "Underperforming risk-adjusted benchmark") : undefined} />
+        <Card label="VaR — 95%"             value={pct(v)}       color="var(--yellow)"
               sub="Daily loss not exceeded 95% of days" />
-        <Card label="CVaR — 95%"            value={pct(cv)}  color="var(--red)"
+        <Card label="CVaR — 95%"            value={pct(cv)}      color="var(--red)"
               sub="Avg loss on worst 5% of days" />
-        <Card label="Max Drawdown"          value={pct(md)}  color={ddColor}
+        <Card label="Max Drawdown"          value={pct(md)}      color={ddColor}
               sub="Worst peak-to-trough decline"
               benchmarkValue={benchmark ? pct(benchmark.max_drawdown) : undefined} />
       </div>

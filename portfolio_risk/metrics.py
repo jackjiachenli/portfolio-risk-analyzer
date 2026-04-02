@@ -77,9 +77,56 @@ def calculate_max_drawdown(
 ) -> float | None:
     if returns is None:
         return None
-    
+
     cumulative = (1 + returns).cumprod()
     peak = cumulative.cummax()
-    
+
     drawdown = (cumulative - peak) / peak
     return drawdown.min()
+
+def calculate_sortino_ratio(
+    annualised_return: float | None,
+    returns: Series | None,
+    risk_free_rate: float = 0.042
+) -> float | None:
+    if annualised_return is None or returns is None:
+        return None
+
+    downside = returns[returns < 0]
+    if len(downside) < 2:
+        return None
+
+    downside_std = downside.std() * np.sqrt(252)
+    if downside_std == 0:
+        return None
+
+    return (annualised_return - risk_free_rate) / downside_std
+
+def calculate_beta(
+    portfolio_returns: Series | None,
+    benchmark_returns: Series | None,
+) -> float | None:
+    if portfolio_returns is None or benchmark_returns is None:
+        return None
+
+    aligned_p, aligned_b = portfolio_returns.align(benchmark_returns, join="inner")
+    if len(aligned_p) < 2:
+        return None
+
+    cov_matrix = np.cov(aligned_p, aligned_b)
+    bench_var = cov_matrix[1, 1]
+    if bench_var == 0:
+        return None
+
+    return float(cov_matrix[0, 1] / bench_var)
+
+def calculate_alpha(
+    annualised_return: float | None,
+    beta: float | None,
+    benchmark_annualised_return: float | None,
+    risk_free_rate: float = 0.042
+) -> float | None:
+    if any(x is None for x in [annualised_return, beta, benchmark_annualised_return]):
+        return None
+
+    return annualised_return - risk_free_rate - beta * (benchmark_annualised_return - risk_free_rate)

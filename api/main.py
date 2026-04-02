@@ -15,6 +15,9 @@ from portfolio_risk.metrics import (
     calculate_var,
     calculate_cvar,
     calculate_max_drawdown,
+    calculate_sortino_ratio,
+    calculate_beta,
+    calculate_alpha,
 )
 from portfolio_risk.simulation import run_monte_carlo
 
@@ -102,6 +105,9 @@ class AnalyseResponse(BaseModel):
     annualised_return: float | None
     annualised_volatility: float | None
     sharpe_ratio: float | None
+    sortino_ratio: float | None
+    beta: float | None
+    alpha: float | None
     var: float | None
     cvar: float | None
     max_drawdown: float | None
@@ -123,6 +129,7 @@ class BenchmarkData(BaseModel):
     annualised_return: float | None
     annualised_volatility: float | None
     sharpe_ratio: float | None
+    sortino_ratio: float | None
     max_drawdown: float | None
 
 
@@ -131,6 +138,9 @@ class PerStockMetrics(BaseModel):
     annualised_return: float | None
     annualised_volatility: float | None
     sharpe_ratio: float | None
+    sortino_ratio: float | None
+    beta: float | None
+    alpha: float | None
     max_drawdown: float | None
     sector: str | None
 
@@ -164,25 +174,30 @@ def get_ticker_sector(ticker: str) -> str:
         return "Unknown"
 
 
-def get_benchmark_data(start_date: str, end_date: str, risk_free: float) -> BenchmarkData | None:
+def get_spy_returns(start_date: str, end_date: str):
     spy_prices = get_price_data(["SPY"], start_date, end_date)
     if spy_prices is None:
         return None
-
     if isinstance(spy_prices.columns, pd.MultiIndex):
         spy_prices = spy_prices["Close"]
+    return calculate_returns(spy_prices.squeeze())
 
-    spy_returns = calculate_returns(spy_prices.squeeze())
+
+def get_benchmark_data(spy_returns, risk_free: float) -> BenchmarkData | None:
+    if spy_returns is None:
+        return None
 
     ann_return = calculate_annualised_return(spy_returns)
     ann_vol    = calculate_annualised_volatility(spy_returns)
     sharpe     = calculate_sharpe_ratio(ann_return, ann_vol, risk_free)
+    sortino    = calculate_sortino_ratio(ann_return, spy_returns, risk_free)
     max_dd     = calculate_max_drawdown(spy_returns)
 
     return BenchmarkData(
         annualised_return     = ann_return,
         annualised_volatility = ann_vol,
         sharpe_ratio          = sharpe,
+        sortino_ratio         = sortino,
         max_drawdown          = max_dd,
     )
 
@@ -262,10 +277,17 @@ def analyse(request: AnalyseRequest):
     ann_return = calculate_annualised_return(portfolio_returns)
     ann_vol    = calculate_annualised_volatility(portfolio_returns)
     sharpe     = calculate_sharpe_ratio(ann_return, ann_vol, risk_free)
+    sortino    = calculate_sortino_ratio(ann_return, portfolio_returns, risk_free)
     var        = calculate_var(portfolio_returns, request.confidence_level)
     cvar       = calculate_cvar(portfolio_returns, request.confidence_level)
     max_dd     = calculate_max_drawdown(portfolio_returns)
     corr       = calculate_correlation_matrix(returns)
+
+    # Fetch SPY returns once for benchmark, beta, and alpha
+    spy_returns = get_spy_returns(request.start_date, request.end_date)
+    benchmark   = get_benchmark_data(spy_returns, risk_free)
+    beta        = calculate_beta(portfolio_returns, spy_returns)
+    alpha       = calculate_alpha(ann_return, beta, benchmark.annualised_return if benchmark else None, risk_free)
 
     # Correlation matrix
     correlation = None
@@ -310,6 +332,7 @@ def analyse(request: AnalyseRequest):
     # Per-stock metrics
     per_stock_metrics = []
     sector_values: dict[str, float] = {}
+    bench_return = benchmark.annualised_return if benchmark else None
     for i, ticker in enumerate(tickers):
         try:
             sector = get_ticker_sector(ticker)
@@ -318,15 +341,21 @@ def analyse(request: AnalyseRequest):
         sector_values[sector] = sector_values.get(sector, 0.0) + values[i]
         if ticker in returns.columns:
             stock_returns = returns[ticker].dropna()
-            s_return = calculate_annualised_return(stock_returns)
-            s_vol    = calculate_annualised_volatility(stock_returns)
-            s_sharpe = calculate_sharpe_ratio(s_return, s_vol, risk_free)
-            s_max_dd = calculate_max_drawdown(stock_returns)
+            s_return  = calculate_annualised_return(stock_returns)
+            s_vol     = calculate_annualised_volatility(stock_returns)
+            s_sharpe  = calculate_sharpe_ratio(s_return, s_vol, risk_free)
+            s_sortino = calculate_sortino_ratio(s_return, stock_returns, risk_free)
+            s_beta    = calculate_beta(stock_returns, spy_returns)
+            s_alpha   = calculate_alpha(s_return, s_beta, bench_return, risk_free)
+            s_max_dd  = calculate_max_drawdown(stock_returns)
             per_stock_metrics.append(PerStockMetrics(
                 ticker                = ticker,
                 annualised_return     = s_return,
                 annualised_volatility = s_vol,
                 sharpe_ratio          = s_sharpe,
+                sortino_ratio         = s_sortino,
+                beta                  = s_beta,
+                alpha                 = s_alpha,
                 max_drawdown          = s_max_dd,
                 sector                = sector,
             ))
@@ -335,9 +364,6 @@ def analyse(request: AnalyseRequest):
         SectorBreakdown(sector=s, value=v, weight=v / total_value)
         for s, v in sorted(sector_values.items(), key=lambda x: x[1], reverse=True)
     ]
-
-    # Get benchmark data
-    benchmark = get_benchmark_data(request.start_date, request.end_date, risk_free)
 
     # Get cumulative data
     cumulative = (1 + portfolio_returns).cumprod().tolist()
@@ -350,6 +376,9 @@ def analyse(request: AnalyseRequest):
         annualised_return     = ann_return,
         annualised_volatility = ann_vol,
         sharpe_ratio          = sharpe,
+        sortino_ratio         = sortino,
+        beta                  = beta,
+        alpha                 = alpha,
         var                   = var,
         cvar                  = cvar,
         max_drawdown          = max_dd,

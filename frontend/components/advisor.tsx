@@ -24,7 +24,8 @@ export default function AdvisorPrompt({ result, startDate, endDate }: Props) {
 
   const {
     positions, total_value, risk_free_rate,
-    annualised_return, annualised_volatility, sharpe_ratio,
+    annualised_return, annualised_volatility, sharpe_ratio, sortino_ratio,
+    beta, alpha,
     var: varVal, cvar, max_drawdown,
     monte_carlo, per_stock_metrics, sector_breakdown, benchmark,
   } = result;
@@ -80,9 +81,12 @@ ${holdingRows}
 Ann. Return    :  ${pct(annualised_return).padStart(10)}   ${pct(benchmark?.annualised_return ?? null).padStart(10)}
 Ann. Volatility:  ${pct(annualised_volatility).padStart(10)}   ${pct(benchmark?.annualised_volatility ?? null).padStart(10)}
 Sharpe Ratio   :  ${f(sharpe_ratio).padStart(10)}   ${f(benchmark?.sharpe_ratio ?? null).padStart(10)}
+Sortino Ratio  :  ${f(sortino_ratio).padStart(10)}   ${f(benchmark?.sortino_ratio ?? null).padStart(10)}
+Beta vs SPY    :  ${f(beta, 3).padStart(10)}         N/A
+Alpha vs SPY   :  ${pct(alpha).padStart(10)}         N/A
 Max Drawdown   :  ${pct(max_drawdown).padStart(10)}   ${pct(benchmark?.max_drawdown ?? null).padStart(10)}
-VaR 95%        :  ${pct(varVal).padStart(10)}   N/A
-CVaR 95%       :  ${pct(cvar).padStart(10)}   N/A
+VaR 95%        :  ${pct(varVal).padStart(10)}         N/A
+CVaR 95%       :  ${pct(cvar).padStart(10)}         N/A
 
 --- SECTOR BREAKDOWN ---
 ${sectorRows}
