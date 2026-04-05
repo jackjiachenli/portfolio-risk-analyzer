@@ -40,6 +40,8 @@ export interface BenchmarkData {
   annualised_volatility: number | null;
   sharpe_ratio: number | null;
   sortino_ratio: number | null;
+  treynor_ratio: number | null;
+  calmar_ratio: number | null;
   max_drawdown: number | null;
 }
 
@@ -49,6 +51,8 @@ export interface PerStockMetrics {
   annualised_volatility: number | null;
   sharpe_ratio: number | null;
   sortino_ratio: number | null;
+  treynor_ratio: number | null;
+  calmar_ratio: number | null;
   beta: number | null;
   alpha: number | null;
   max_drawdown: number | null;
@@ -69,6 +73,8 @@ export interface AnalyseResponse {
   annualised_volatility: number | null;
   sharpe_ratio: number | null;
   sortino_ratio: number | null;
+  treynor_ratio: number | null;
+  calmar_ratio: number | null;
   beta: number | null;
   alpha: number | null;
   var: number | null;

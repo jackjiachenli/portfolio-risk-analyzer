@@ -18,19 +18,21 @@ If you prefer to run the app locally with no cold start, see [Getting Started](#
 
 ### Risk Metrics
 
-The dashboard calculates nine core risk metrics for your portfolio:
+The dashboard calculates eleven core risk metrics for your portfolio:
 
 - **Annualised Return** — your portfolio's average yearly return over the selected historical period
 - **Annualised Volatility** — how much your returns fluctuate year to year, a direct measure of risk
-- **Sharpe Ratio** — return per unit of risk, adjusted for the risk-free rate (US 13-week Treasury). Above 1.0 is considered good, above 2.0 excellent
+- **Sharpe Ratio** — return per unit of total risk, adjusted for the risk-free rate (US 13-week Treasury). Above 1.0 is considered good, above 2.0 excellent
 - **Sortino Ratio** — like the Sharpe Ratio but only penalises downside volatility, giving a clearer picture of risk-adjusted return when upside swings are not a concern
+- **Treynor Ratio** — return per unit of market risk (beta), adjusted for the risk-free rate. Useful for evaluating well-diversified portfolios where systematic risk is the primary concern
+- **Calmar Ratio** — annualised return divided by the absolute maximum drawdown. Higher values indicate better return relative to the worst historical decline experienced
 - **Beta** — how much your portfolio amplifies or dampens market movements relative to SPY. Above 1.0 means more volatile than the market, below 1.0 means less
 - **Alpha** — the annualised return your portfolio earns above or below what its beta exposure to the market would predict (Jensen's alpha). Positive alpha indicates outperformance on a risk-adjusted basis
 - **Value at Risk (VaR 95%)** — the maximum daily loss you can expect on 95% of trading days
 - **Conditional VaR (CVaR 95%)** — the average loss on the worst 5% of days, a more conservative risk measure than VaR alone
 - **Max Drawdown** — the worst peak-to-trough decline your portfolio has experienced in the selected period
 - **Benchmark comparison** — each applicable metric is shown alongside the equivalent SPY figure over the same historical period, so you can see whether your portfolio is outperforming or underperforming the market
-- **Per-stock breakdown** — individual annualised return, volatility, Sharpe ratio, Sortino ratio, beta, alpha, and max drawdown for each holding, allowing direct comparison across positions
+- **Per-stock breakdown** — individual annualised return, volatility, Sharpe ratio, Sortino ratio, Treynor ratio, Calmar ratio, beta, alpha, and max drawdown for each holding, allowing direct comparison across positions
 
 ### Portfolio Input
 
@@ -99,7 +101,7 @@ portfolio-risk-analyzer/
 ├── portfolio_risk/
 │   ├── data.py                Price and risk-free rate fetching
 │   ├── returns.py             Log returns calculation
-│   ├── metrics.py             VaR, CVaR, Sharpe, Sortino, beta, alpha, drawdown etc
+│   ├── metrics.py             VaR, CVaR, Sharpe, Sortino, Treynor, Calmar, beta, alpha, drawdown etc
 │   └── simulation.py          Monte Carlo simulation
 └── tests/
     └── test_metrics.py        Pytest test suite

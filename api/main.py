@@ -18,6 +18,8 @@ from portfolio_risk.metrics import (
     calculate_sortino_ratio,
     calculate_beta,
     calculate_alpha,
+    calculate_treynor_ratio,
+    calculate_calmar_ratio,
 )
 from portfolio_risk.simulation import run_monte_carlo
 
@@ -106,6 +108,8 @@ class AnalyseResponse(BaseModel):
     annualised_volatility: float | None
     sharpe_ratio: float | None
     sortino_ratio: float | None
+    treynor_ratio: float | None
+    calmar_ratio: float | None
     beta: float | None
     alpha: float | None
     var: float | None
@@ -130,6 +134,8 @@ class BenchmarkData(BaseModel):
     annualised_volatility: float | None
     sharpe_ratio: float | None
     sortino_ratio: float | None
+    treynor_ratio: float | None
+    calmar_ratio: float | None
     max_drawdown: float | None
 
 
@@ -139,6 +145,8 @@ class PerStockMetrics(BaseModel):
     annualised_volatility: float | None
     sharpe_ratio: float | None
     sortino_ratio: float | None
+    treynor_ratio: float | None
+    calmar_ratio: float | None
     beta: float | None
     alpha: float | None
     max_drawdown: float | None
@@ -192,12 +200,17 @@ def get_benchmark_data(spy_returns, risk_free: float) -> BenchmarkData | None:
     sharpe     = calculate_sharpe_ratio(ann_return, ann_vol, risk_free)
     sortino    = calculate_sortino_ratio(ann_return, spy_returns, risk_free)
     max_dd     = calculate_max_drawdown(spy_returns)
+    # SPY beta vs itself is 1 by definition
+    treynor    = calculate_treynor_ratio(ann_return, 1.0, risk_free)
+    calmar     = calculate_calmar_ratio(ann_return, max_dd)
 
     return BenchmarkData(
         annualised_return     = ann_return,
         annualised_volatility = ann_vol,
         sharpe_ratio          = sharpe,
         sortino_ratio         = sortino,
+        treynor_ratio         = treynor,
+        calmar_ratio          = calmar,
         max_drawdown          = max_dd,
     )
 
@@ -288,6 +301,8 @@ def analyse(request: AnalyseRequest):
     benchmark   = get_benchmark_data(spy_returns, risk_free)
     beta        = calculate_beta(portfolio_returns, spy_returns)
     alpha       = calculate_alpha(ann_return, beta, benchmark.annualised_return if benchmark else None, risk_free)
+    treynor     = calculate_treynor_ratio(ann_return, beta, risk_free)
+    calmar      = calculate_calmar_ratio(ann_return, max_dd)
 
     # Correlation matrix
     correlation = None
@@ -348,12 +363,16 @@ def analyse(request: AnalyseRequest):
             s_beta    = calculate_beta(stock_returns, spy_returns)
             s_alpha   = calculate_alpha(s_return, s_beta, bench_return, risk_free)
             s_max_dd  = calculate_max_drawdown(stock_returns)
+            s_treynor = calculate_treynor_ratio(s_return, s_beta, risk_free)
+            s_calmar  = calculate_calmar_ratio(s_return, s_max_dd)
             per_stock_metrics.append(PerStockMetrics(
                 ticker                = ticker,
                 annualised_return     = s_return,
                 annualised_volatility = s_vol,
                 sharpe_ratio          = s_sharpe,
                 sortino_ratio         = s_sortino,
+                treynor_ratio         = s_treynor,
+                calmar_ratio          = s_calmar,
                 beta                  = s_beta,
                 alpha                 = s_alpha,
                 max_drawdown          = s_max_dd,
@@ -377,6 +396,8 @@ def analyse(request: AnalyseRequest):
         annualised_volatility = ann_vol,
         sharpe_ratio          = sharpe,
         sortino_ratio         = sortino,
+        treynor_ratio         = treynor,
+        calmar_ratio          = calmar,
         beta                  = beta,
         alpha                 = alpha,
         var                   = var,

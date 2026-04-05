@@ -130,3 +130,24 @@ def calculate_alpha(
         return None
 
     return annualised_return - risk_free_rate - beta * (benchmark_annualised_return - risk_free_rate)
+
+def calculate_treynor_ratio(
+    annualised_return: float | None,
+    beta: float | None,
+    risk_free_rate: float = 0.042
+) -> float | None:
+    if annualised_return is None or beta is None:
+        return None
+    if beta == 0:
+        return None
+    return (annualised_return - risk_free_rate) / beta
+
+def calculate_calmar_ratio(
+    annualised_return: float | None,
+    max_drawdown: float | None,
+) -> float | None:
+    if annualised_return is None or max_drawdown is None:
+        return None
+    if max_drawdown == 0:
+        return None
+    return annualised_return / abs(max_drawdown)
